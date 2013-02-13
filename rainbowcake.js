@@ -33,8 +33,8 @@ var createPage = function(session){
 		.append('<script type="text/javascript">')
 		.append('(function($){$.rainbowcake.session('+JSON.stringify(session)+').actions({});}(jQuery))')
 		.append('</script>')
-		.append('<script type="text/javascript" src="//lnf-jgett.eecs.umich.edu/demo/js/rainbowcake-actions.js"></script>') //TODO: replace this with stored data
 		.append('<script type="text/javascript" src="/js/actions.js"></script>')
+		.append('<script type="text/javascript" src="//lnf-jgett.eecs.umich.edu/demo/js/rainbowcake-actions.js"></script>') //TODO: replace this with stored data
 		.append('<script type="text/javascript" src="/js/client.js"></script>')
 		.append('</head>')
 		.append('<body>')
