@@ -93,8 +93,7 @@ var define = function(x, y){
 var createSession = function(callback){
 	var session = {'id': (sessionIndex).toString(36), 'pwd': null};
 	sessionIndex += 1;
-	require('./server/commands.js')
-		.command('shell-exec')
+	commands('shell-exec')
 		.session(session)
 		.data('pwd')
 		.execute(function(result){
@@ -104,7 +103,7 @@ var createSession = function(callback){
 }
 
 var handleLogin = function(post, callback){
-	var result = {'success': false, 'code': '1'}
+	var result = {'success': true, 'code': ''}
 	
 	callback(result);
 }
