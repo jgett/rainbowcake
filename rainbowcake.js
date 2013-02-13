@@ -1,4 +1,4 @@
-//console.log(require('node-sqlite3'));
+var sqlite3 = require('node-sqlite3').verbose();
 var express = require('express');
 var server = express();
 
@@ -50,6 +50,9 @@ var message = function(code){
 	switch (code){
 		case '1':
 			result = 'Invalid username or password';
+			break;
+		case '2':
+			result = 'Your session has expired';
 			break;
 		default:
 			result = 'An unknown problem occurred.';
@@ -103,9 +106,39 @@ var createSession = function(callback){
 }
 
 var handleLogin = function(post, callback){
-	var result = {'success': true, 'code': ''}
+	//default login: admin|default
+	var result = {'success': false, 'code': '1', 'token': ''}	
 	
-	callback(result);
+	var encpw = require('crypto').createHash('md5').update(post.password).digest('hex');
+	
+	var db = new sqlite3.Database('./server/database/rainbowcake.db');
+	db.serialize(function() {
+		db.all("SELECT * FROM users WHERE username = ?", post.username, function(err, rows) {
+			if (rows.length > 0 && rows[0].password == encpw){
+				result.success = true;
+				result.code = '';
+				result.token = require('crypto').createHash('md5').update(rows[0].username + rows[0].password + 'iamsosmrt').digest('hex');
+			}
+			callback(result);
+		});
+	});
+	db.close();
+}
+
+var checkToken = function(token, callback){
+	var result = false;
+	var splitter = token.split(':');
+	if (splitter.length == 2){
+		var db = new sqlite3.Database('./server/database/rainbowcake.db');
+		db.serialize(function() {
+			db.all("SELECT * FROM users WHERE username = ?", splitter[0], function(err, rows) {
+				var expected = require('crypto').createHash('md5').update(rows[0].username + rows[0].password + 'iamsosmrt').digest('hex');
+				result = (splitter[1] == expected);
+				callback(result);
+			});
+		});
+		db.close();
+	}
 }
 
 var loadMain = function(res){
@@ -148,17 +181,29 @@ var commands = function(name){
 
 server.get('/', function(req, res){
 	var token = define(req.cookies.rainbowcake_token, '');
-	if (token == '') res.redirect('/login');
-	loadMain(res);
+	if (token == '')
+		res.redirect('/login');
+	else{
+		checkToken(token, function(valid){
+			if (valid) loadMain(res);
+			else res.redirect('/login/?code=2');
+		});
+	}	
 });
 
 server.post('/', function(req, res){
 	if (req.body.command == 'login'){
 		handleLogin(req.body, function(result){
-			if (result.success) loadMain(res)
-			else res.redirect('/login/?code='+result.code)
+			if (result.success){
+				res.cookie('rainbowcake_token', req.body.username+':'+result.token, {maxAge: 900000});
+				loadMain(res);
+			}
+			else
+				res.redirect('/login/?code='+result.code);
 		});
 	}
+	else
+		res.redirect('/login');
 });
 
 server.get('/login', function(req, res){
